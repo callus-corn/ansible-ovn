@@ -1,0 +1,4 @@
+---
+
+- name: import {{ ovs_action }}.yml
+  import_tasks: "{{ ovs_action }}.yml"

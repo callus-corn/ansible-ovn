@@ -1,0 +1,14 @@
+---
+
+- name: start ovn controller
+  hosts: ovn_controller
+  become: yes
+  tasks:
+
+    - name: start ovn
+      import_role:
+        name: ovn
+      vars:
+        ovn_action: start
+      tags: start_ovn
+
