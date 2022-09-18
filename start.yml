@@ -5,10 +5,18 @@
   become: yes
   tasks:
 
-    - name: start ovn
+    - name: start ovn controller
       import_role:
         name: ovn
       vars:
-        ovn_action: start
+        ovn_action: start_controller
       tags: start_ovn
 
+#- name: start ovn host
+#  hosts: ovn_host
+#  become: yes
+#  tasks:
+
+#    - name: start ovn host
+#      import_role:
+#        name: 

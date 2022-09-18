@@ -1,0 +1,70 @@
+---
+
+- name: make dir
+  file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "{{ ovs_run_dir }}"
+    - "{{ ovn_etc_dir }}"
+    - "{{ ovn_log_dir }}"
+    - "{{ ovn_run_dir }}"
+
+- name: create nb db schema
+  command: >-
+    ovsdb-tool create 
+      {{ ovn_etc_dir }}/{{ ovn_nb_db_name }}.db
+      {{ ovn_dest_dir }}/ovn-nb.ovsschema
+  changed_when: true
+
+- name: create sb db schema
+  command: >-
+    ovsdb-tool create
+      {{ ovn_etc_dir }}/{{ ovn_sb_db_name }}.db
+      {{ ovn_dest_dir }}/ovn-sb.ovsschema
+  changed_when: true
+
+- name: run nb db
+  command: >-
+    ovsdb-server {{ ovn_etc_dir }}/{{ ovn_nb_db_name }}.db
+      --remote=punix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      --remote=ptcp:{{ ovn_nb_port }}
+      --pidfile={{ ovn_run_dir }}/{{ ovn_nb_db_name }}.pid
+      --detach
+      --log-file={{ ovn_log_dir }}/{{ ovn_nb_db_name }}.log
+  changed_when: true
+
+- name: run sb db
+  command: >-
+    ovsdb-server {{ ovn_etc_dir }}/{{ ovn_sb_db_name }}.db
+      --remote=punix:{{ ovn_run_dir }}/{{ ovn_sb_db_name }}.sock
+      --remote=ptcp:{{ ovn_sb_port }}
+      --pidfile={{ ovn_run_dir }}/{{ ovn_sb_db_name }}.pid
+      --detach
+      --log-file={{ ovn_log_dir }}/{{ ovn_sb_db_name }}.log
+  changed_when: true
+
+- name: init nb db
+  command: >-
+    ovn-nbctl
+      --db unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      --no-wait
+      init
+  changed_when: true
+
+- name: init sb db
+  command: >-
+    ovn-sbctl
+      --db unix:{{ ovn_run_dir }}/{{ ovn_sb_db_name }}.sock
+      init
+  changed_when: true
+
+- name: run northd
+  command: >-
+    ovn-northd
+      --pidfile={{ ovn_run_dir }}/northd.pid
+      --detach
+      --log-file={{ ovn_log_dir }}/northd.log
+      --ovnnb-db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      --ovnsb-db=unix:{{ ovn_run_dir }}/{{ ovn_sb_db_name }}.sock
+  changed_when: true
