@@ -1,0 +1,8 @@
+#!/bin/bash
+
+nmcli c del {{ ovn_underlay_if[inventory_hostname] }}
+ovs-vsctl add-br {{ ovn_br_ext }}
+ovs-vsctl add-port {{ ovn_br_ext }} {{ ovn_underlay_if[inventory_hostname] }}
+ip link set {{ ovn_br_ext }} up
+ip address add {{ ansible_host }}/{{ ovn_underlay_subnet_length[inventory_hostname] }} dev {{ ovn_br_ext }}
+ovs-vsctl set open . external-ids:ovn-bridge-mappings={{ ovn_physical_network_name }}:{{ ovn_br_ext }}

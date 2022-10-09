@@ -5,10 +5,17 @@
     path: "{{ item }}"
     state: directory
   loop:
+    - "{{ ovs_etc_dir }}"
+    - "{{ ovs_log_dir }}"
     - "{{ ovs_run_dir }}"
     - "{{ ovn_etc_dir }}"
     - "{{ ovn_log_dir }}"
     - "{{ ovn_run_dir }}"
+
+- name: check nb db
+  stat:
+    path: "{{ ovn_etc_dir }}/{{ ovn_nb_db_name }}.db"
+  register: nb_db
 
 - name: create nb db schema
   command: >-
@@ -16,6 +23,12 @@
       {{ ovn_etc_dir }}/{{ ovn_nb_db_name }}.db
       {{ ovn_dest_dir }}/ovn-nb.ovsschema
   changed_when: true
+  when: not (nb_db.stat.exists | bool)
+
+- name: check sb db
+  stat:
+    path: "{{ ovn_etc_dir }}/{{ ovn_sb_db_name }}.db"
+  register: sb_db
 
 - name: create sb db schema
   command: >-
@@ -23,6 +36,12 @@
       {{ ovn_etc_dir }}/{{ ovn_sb_db_name }}.db
       {{ ovn_dest_dir }}/ovn-sb.ovsschema
   changed_when: true
+  when: not (sb_db.stat.exists | bool)
+
+- name: check nb server
+  stat:
+    path: "{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.pid"
+  register: nb_server
 
 - name: run nb db
   command: >-
@@ -33,6 +52,12 @@
       --detach
       --log-file={{ ovn_log_dir }}/{{ ovn_nb_db_name }}.log
   changed_when: true
+  when: not (nb_server.stat.exists | bool)
+
+- name: check sb server
+  stat:
+    path: "{{ ovn_run_dir }}/{{ ovn_sb_db_name }}.pid"
+  register: sb_server
 
 - name: run sb db
   command: >-
@@ -43,6 +68,7 @@
       --detach
       --log-file={{ ovn_log_dir }}/{{ ovn_sb_db_name }}.log
   changed_when: true
+  when: not (sb_server.stat.exists | bool)
 
 - name: init nb db
   command: >-
@@ -51,6 +77,7 @@
       --no-wait
       init
   changed_when: true
+  when: not (nb_server.stat.exists | bool)
 
 - name: init sb db
   command: >-
@@ -58,6 +85,12 @@
       --db unix:{{ ovn_run_dir }}/{{ ovn_sb_db_name }}.sock
       init
   changed_when: true
+  when: not (sb_server.stat.exists | bool)
+
+- name: check northd
+  stat:
+    path: "{{ ovn_run_dir }}/northd.pid"
+  register: northd
 
 - name: run northd
   command: >-
@@ -68,3 +101,15 @@
       --ovnnb-db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
       --ovnsb-db=unix:{{ ovn_run_dir }}/{{ ovn_sb_db_name }}.sock
   changed_when: true
+  when: not (northd.stat.exists | bool)
+
+- name: port open
+  firewalld:
+    zone: public
+    port: "{{ item }}/tcp"
+    permanent: yes
+    immediate: yes
+    state: enabled
+  loop:
+    - "{{ ovn_nb_port }}"
+    - "{{ ovn_sb_port }}"

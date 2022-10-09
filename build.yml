@@ -5,13 +5,6 @@
   become: yes
   tasks:
 
-    - name: install ovs
-      import_role:
-        name: ovs
-      vars:
-        ovs_action: install
-      tags: install_ovs
-
     - name: install ovn
       import_role:
         name: ovn

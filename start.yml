@@ -10,13 +10,16 @@
         name: ovn
       vars:
         ovn_action: start_controller
-      tags: start_ovn
+      tags: start_ovn_controller
 
-#- name: start ovn host
-#  hosts: ovn_host
-#  become: yes
-#  tasks:
+- name: start ovn host
+  hosts: ovn_host
+  become: yes
+  tasks:
 
-#    - name: start ovn host
-#      import_role:
-#        name: 
+    - name: start ovn host
+      import_role:
+        name: ovn
+      vars:
+        ovn_action: start_host
+      tags: start_ovn_host

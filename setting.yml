@@ -1,0 +1,25 @@
+---
+
+- name: setting ovn controller
+  hosts: ovn_controller
+  become: yes
+  tasks:
+
+    - name: setting ovn controller
+      import_role:
+        name: ovn
+      vars:
+        ovn_action: setting_controller
+      tags: setting_ovn_controller
+
+- name: setting ovn host
+  hosts: ovn_host
+  become: yes
+  tasks:
+
+    - name: setting ovn host
+      import_role:
+        name: ovn
+      vars:
+        ovn_action: setting_host
+      tags: setting_ovn_host

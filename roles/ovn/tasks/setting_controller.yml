@@ -1,0 +1,144 @@
+
+- name: make overlay switch
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      --may-exist
+      ls-add {{ ovn_overlay_switch }}
+
+- name: make public switch
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      --may-exist
+      ls-add {{ ovn_public_switch }}
+
+- name: make public switch 
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      --may-exist
+      lsp-add {{ ovn_public_switch }} {{ ovn_public_switch_port }}
+
+- name: set public port type localnet
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      lsp-set-type {{ ovn_public_switch_port }} localnet
+
+- name: set public port addresses unknown
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      lsp-set-addresses {{ ovn_public_switch_port }} unknown
+
+- name: set public port network_name
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      lsp-set-options {{ ovn_public_switch_port }}
+      network_name={{ ovn_physical_network_name }}
+
+- name: make router
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      --may-exist
+      lr-add {{ ovn_router }}
+
+- name: set default route
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      --may-exist
+      lr-route-add {{ ovn_router }}
+      0.0.0.0/0
+      {{ ovn_default_route }}
+
+- name: set snat
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      --may-exist
+      lr-nat-add {{ ovn_router }}
+      snat
+      {{ ovn_router_public_switch_port_ip }}
+      {{ ovn_snat_src }}
+
+- name: make router <-> overlay switch port
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      --may-exist
+      lrp-add {{ ovn_router }} {{ ovn_router_overlay_switch_port }}
+      {{ ovn_router_overlay_switch_port_mac }}
+      {{ ovn_router_overlay_switch_port_ip }}/{{ ovn_router_overlay_switch_port_subnet_length }}
+
+- name: make overlay switch <-> router port
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      --may-exist
+      lsp-add {{ ovn_overlay_switch }} {{ ovn_overlay_switch_router_port }}
+
+- name: set overlay switch port type router
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      lsp-set-type {{ ovn_overlay_switch_router_port }} router
+
+- name: set overlay switch port addresses router
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      lsp-set-addresses {{ ovn_overlay_switch_router_port }} router
+
+- name: connect overlay switch <-> router
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      lsp-set-options {{ ovn_overlay_switch_router_port }}
+      router-port={{ ovn_router_overlay_switch_port }}
+
+- name: make router <-> public switch port
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      --may-exist
+      lrp-add {{ ovn_router }} {{ ovn_router_public_switch_port }}
+      {{ ovn_router_public_switch_port_mac }}
+      {{ ovn_router_public_switch_port_ip }}/{{ ovn_router_overlay_switch_port_subnet_length }}
+
+- name: make public switch <-> router port
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      --may-exist
+      lsp-add {{ ovn_public_switch }} {{ ovn_public_switch_router_port }}
+
+- name: set public switch port type router
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      lsp-set-type {{ ovn_public_switch_router_port }} router
+
+- name: set public switch port addresses router
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      lsp-set-addresses {{ ovn_public_switch_router_port }} router
+
+- name: connect public switch <-> router
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      lsp-set-options {{ ovn_public_switch_router_port }}
+      router-port={{ ovn_router_public_switch_port }}
+
+- name: set gateway chassis
+  command: >-
+    ovn-nbctl
+      --db=unix:{{ ovn_run_dir }}/{{ ovn_nb_db_name }}.sock
+      lrp-set-gateway-chassis {{ ovn_router_public_switch_port }}
+      {{ item }}
+  loop: "{{ ovn_system_ids.values() | list }}"

@@ -1,0 +1,18 @@
+
+- name: check {{ ovn_br_ext }} is exist
+  stat:
+    path: /sys/class/net/{{ ovn_br_ext }}/address
+  register: br_ext
+
+- name: put bridge script
+  template:
+    src: ovn.sh.j2
+    dest: /tmp/ovn.sh
+    owner: root
+    mode: 0755
+  when: not br_ext.stat.exists
+
+- name: exec bridge script
+  command: >-
+    /tmp/ovn.sh ; rm /tmp/ovn.sh
+  when: not br_ext.stat.exists
